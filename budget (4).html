@@ -1,0 +1,613 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Weekly Budget</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #0a0a0a; min-height: 100vh; font-family: -apple-system, 'SF Pro Display', 'Helvetica Neue', sans-serif; color: #fff; }
+  button { cursor: pointer; font-family: inherit; }
+
+  .nav { display: flex; background: #111; border-bottom: 1px solid #1a1a1a; position: sticky; top: 0; z-index: 100; }
+  .nav-btn { flex: 1; padding: 14px 4px; background: none; border: none; color: #444; font-size: 11px; font-weight: 600; letter-spacing: 0.07em; text-transform: uppercase; border-bottom: 2px solid transparent; transition: color 0.2s; }
+  .nav-btn.active { color: #fff; border-bottom-color: #00d084; }
+
+  .view { display: none; padding-bottom: 140px; }
+  .view.active { display: block; }
+
+  .content { max-width: 520px; margin: 0 auto; }
+  .section { padding: 24px 20px 0; }
+  .section-label { font-size: 11px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: #444; margin-bottom: 12px; }
+  .card { background: #111; border-radius: 16px; overflow: hidden; }
+
+  .card-row { display: flex; align-items: center; padding: 13px 18px; border-bottom: 1px solid #1a1a1a; gap: 10px; }
+  .card-row:last-child { border-bottom: none; }
+  .row-label { flex: 1; }
+  .row-label .name { font-size: 15px; font-weight: 500; }
+  .row-label .note { font-size: 12px; color: #444; margin-top: 2px; }
+  .row-input { display: flex; align-items: center; gap: 5px; }
+  .row-input .sym { font-size: 12px; color: #444; }
+  .row-input input { width: 86px; text-align: right; background: #1a1a1a; border: 1px solid #2a2a2a; border-radius: 8px; color: #fff; font-size: 15px; font-weight: 500; padding: 6px 10px; font-family: inherit; outline: none; -webkit-appearance: none; }
+  .row-input input:focus { border-color: #444; }
+  .row-input input.income-val { color: #00d084; }
+
+  .section-foot { display: flex; justify-content: space-between; align-items: center; padding: 10px 2px 0; }
+  .section-foot .lbl { font-size: 11px; color: #444; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; }
+  .section-foot .val { font-size: 15px; font-weight: 700; }
+
+  .var-row { padding: 14px 18px; border-bottom: 1px solid #1a1a1a; }
+  .var-row:last-child { border-bottom: none; }
+  .var-name { font-size: 15px; font-weight: 500; margin-bottom: 10px; }
+  .var-inputs { display: flex; gap: 10px; margin-bottom: 10px; }
+  .var-field { flex: 1; background: #1a1a1a; border: 1px solid #2a2a2a; border-radius: 10px; padding: 10px 12px; }
+  .var-field label { display: block; font-size: 10px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: #444; margin-bottom: 4px; }
+  .var-field input { width: 100%; background: transparent; border: none; color: #fff; font-size: 18px; font-weight: 600; font-family: inherit; outline: none; -webkit-appearance: none; }
+  .var-field input.over { color: #ff4d4d; }
+  .var-field.over-box { border-color: #ff4d4d33; }
+  .bar-track { background: #1a1a1a; border-radius: 3px; height: 4px; overflow: hidden; }
+  .bar-fill { height: 100%; border-radius: 3px; transition: width 0.3s, background 0.3s; }
+  .bar-note { font-size: 11px; color: #444; margin-top: 5px; }
+  .bar-note.over { color: #ff4d4d; }
+
+  .save-bar { padding: 20px 20px 0; }
+  .save-row { display: flex; gap: 10px; align-items: center; }
+  .week-input { flex: 1; background: #111; border: 1px solid #1a1a1a; border-radius: 10px; color: #fff; padding: 11px 14px; font-size: 14px; font-family: inherit; outline: none; }
+  .save-btn { background: #00d084; color: #000; border: none; border-radius: 10px; padding: 11px 20px; font-size: 13px; font-weight: 700; white-space: nowrap; }
+  .save-btn:hover { background: #00b572; }
+
+  /* CSV upload */
+  .csv-section { padding: 24px 20px 0; }
+  .csv-card { background: #111; border-radius: 16px; overflow: hidden; padding: 20px 18px; }
+  .csv-drop { border: 1.5px dashed #2a2a2a; border-radius: 12px; padding: 28px 20px; text-align: center; cursor: pointer; transition: border-color 0.2s; }
+  .csv-drop:hover, .csv-drop.drag { border-color: #00d084; }
+  .csv-drop-icon { font-size: 28px; margin-bottom: 10px; }
+  .csv-drop-title { font-size: 15px; font-weight: 600; margin-bottom: 4px; }
+  .csv-drop-sub { font-size: 12px; color: #444; }
+  #csv-file-input { display: none; }
+  .csv-status { margin-top: 14px; font-size: 13px; color: #444; text-align: center; min-height: 18px; }
+  .csv-status.ok { color: #00d084; }
+  .csv-status.err { color: #ff4d4d; }
+
+  /* unmatched / other */
+  .other-total-row { display: flex; justify-content: space-between; align-items: center; padding: 13px 18px; }
+  .other-total-row .name { font-size: 15px; font-weight: 500; }
+  .other-detail { padding: 0 18px 14px; }
+  .other-detail-item { font-size: 12px; color: #555; padding: 3px 0; display: flex; justify-content: space-between; border-bottom: 1px solid #161616; }
+  .other-detail-item:last-child { border-bottom: none; }
+
+  footer { position: fixed; bottom: 0; left: 0; right: 0; background: #111; border-top: 1px solid #1a1a1a; z-index: 100; }
+  .footer-inner { max-width: 520px; margin: 0 auto; padding: 14px 20px 24px; display: flex; justify-content: space-between; align-items: flex-start; }
+  .foot-label { font-size: 11px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: #444; margin-bottom: 4px; }
+  .foot-main { font-size: 28px; font-weight: 700; letter-spacing: -1px; line-height: 1; }
+  .foot-sub { font-size: 12px; color: #444; margin-top: 4px; }
+  .foot-right { text-align: right; }
+  .foot-right .foot-main { font-size: 18px; }
+
+  .history-wrap { padding: 16px 20px 0; overflow-x: auto; }
+  .history-table { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 420px; }
+  .history-table th { font-size: 10px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: #444; padding: 0 10px 10px; text-align: right; }
+  .history-table th:first-child { text-align: left; }
+  .history-table td { padding: 11px 10px; border-top: 1px solid #1a1a1a; text-align: right; }
+  .history-table td:first-child { text-align: left; color: #888; font-size: 12px; }
+  .history-table tr:hover td { background: #111; }
+  .del-btn { background: none; border: none; color: #333; font-size: 18px; line-height: 1; transition: color 0.2s; }
+  .del-btn:hover { color: #ff4d4d; }
+  .no-history { padding: 48px 20px; text-align: center; color: #333; font-size: 14px; line-height: 1.6; }
+
+  .chart-wrap { padding: 24px 20px 0; }
+  .chart-label { font-size: 11px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: #444; margin-bottom: 16px; }
+  .chart-legend { display: flex; gap: 18px; margin-top: 14px; }
+  .legend-item { display: flex; align-items: center; gap: 6px; font-size: 12px; color: #555; }
+  .legend-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  canvas { display: block; width: 100% !important; }
+</style>
+</head>
+<body>
+
+<div class="nav">
+  <button class="nav-btn active" onclick="showView('budget')">Budget</button>
+  <button class="nav-btn" onclick="showView('history')">History</button>
+  <button class="nav-btn" onclick="showView('chart')">Chart</button>
+  <button class="nav-btn" onclick="showView('import')">Import CSV</button>
+</div>
+
+<!-- BUDGET -->
+<div class="view active" id="view-budget">
+  <div class="content">
+    <div class="section">
+      <div class="section-label">Income</div>
+      <div class="card" id="income-card"></div>
+      <div class="section-foot">
+        <span class="lbl">Total income</span>
+        <span class="val" style="color:#00d084" id="income-total"></span>
+      </div>
+    </div>
+    <div class="section">
+      <div class="section-label">Fixed expenses</div>
+      <div class="card" id="fixed-card"></div>
+      <div class="section-foot">
+        <span class="lbl">Total fixed</span>
+        <span class="val" style="color:#ff4d4d" id="fixed-total"></span>
+      </div>
+    </div>
+    <div class="section">
+      <div class="section-label">Variable spending</div>
+      <div class="card" id="variable-card"></div>
+      <div class="section-foot">
+        <span class="lbl">Total variable</span>
+        <span class="val" style="color:#ff9500" id="variable-total"></span>
+      </div>
+    </div>
+    <div class="section">
+      <div class="section-label">Other / Unmatched</div>
+      <div class="card" id="other-card">
+        <div class="other-total-row">
+          <span class="name">Other spending</span>
+          <span style="font-size:15px;font-weight:700;color:#888" id="other-total">$0.00 /wk</span>
+        </div>
+      </div>
+      <div class="section-foot">
+        <span class="lbl">Upload a CSV to populate</span>
+      </div>
+    </div>
+    <div class="save-bar">
+      <div class="section-label" style="margin-bottom:10px">Save this week</div>
+      <div class="save-row">
+        <input class="week-input" id="week-label" placeholder="e.g. Week 1 — 24 May 2026" />
+        <button class="save-btn" onclick="saveWeek()">Archive</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- HISTORY -->
+<div class="view" id="view-history">
+  <div class="content">
+    <div id="history-output"></div>
+  </div>
+</div>
+
+<!-- CHART -->
+<div class="view" id="view-chart">
+  <div class="content">
+    <div class="chart-wrap">
+      <div class="chart-label">Income vs spending vs savings</div>
+      <canvas id="myChart" height="260"></canvas>
+      <div class="chart-legend">
+        <div class="legend-item"><div class="legend-dot" style="background:#00d084"></div>Income</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#ff4d4d"></div>Spending</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#4a9eca"></div>Savings</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- IMPORT CSV -->
+<div class="view" id="view-import">
+  <div class="content">
+    <div class="csv-section">
+      <div class="section-label">Import CSV</div>
+      <div class="csv-card">
+        <div class="csv-drop" id="csv-drop" onclick="document.getElementById('csv-file-input').click()">
+          <div class="csv-drop-icon">📂</div>
+          <div class="csv-drop-title">Tap to upload your bank CSV</div>
+          <div class="csv-drop-sub">Reads date, description, amount, direction columns</div>
+        </div>
+        <input type="file" id="csv-file-input" accept=".csv">
+        <div class="csv-status" id="csv-status"></div>
+      </div>
+
+      <div style="margin-top:20px;background:#111;border-radius:16px;padding:18px;">
+        <div class="section-label" style="margin-bottom:12px">How it works</div>
+        <div style="font-size:13px;color:#555;line-height:1.8;">
+          1. Export your transactions from your bank as a CSV<br>
+          2. Upload it here — the app reads the last 7 days<br>
+          3. Transactions are matched to budget categories<br>
+          4. Anything unmatched appears in <strong style="color:#888">Other</strong><br>
+          5. Variable spent amounts update automatically
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<footer>
+  <div class="footer-inner">
+    <div>
+      <div class="foot-label">Weekly savings</div>
+      <div class="foot-main" id="foot-savings"></div>
+      <div class="foot-sub" id="foot-rate"></div>
+    </div>
+    <div class="foot-right">
+      <div class="foot-label">Annual</div>
+      <div class="foot-main" id="foot-annual"></div>
+      <div class="foot-sub" id="foot-out"></div>
+    </div>
+  </div>
+</footer>
+
+<script>
+const fmt = n => n.toLocaleString('en-AU',{style:'currency',currency:'AUD',minimumFractionDigits:2});
+
+const income = [
+  {id:'i1',label:'Tall Tech Noosa Wages',amount:1887.93},
+  {id:'i2',label:'Ochre Health',amount:600.00},
+];
+const fixed = [
+  {id:'rent',label:'Rent',amount:670.00,note:'Alpha Residential'},
+  {id:'nzmtg',label:'NZ Mortgage',amount:94.84,note:'Top-up transfer'},
+  {id:'power',label:'Power',amount:35.00,note:'Origin Energy'},
+  {id:'water',label:'Water',amount:15.50,note:'Via rent account'},
+  {id:'telstra',label:'Telstra',amount:79.57,note:''},
+  {id:'netflix',label:'Netflix',amount:4.58,note:''},
+  {id:'stan',label:'Stan',amount:7.38,note:''},
+  {id:'spotify',label:'Spotify',amount:5.77,note:''},
+  {id:'insure',label:'Insurance',amount:27.16,note:'Suncorp'},
+  {id:'gym',label:'Gym',amount:51.44,note:'Fitness Cartel'},
+  {id:'ff',label:'Flying Fish',amount:35.46,note:'Swimming'},
+  {id:'beauty',label:'Beauty',amount:27.27,note:'Lounge Aesthetics & Nails'},
+  {id:'pharmacy',label:'Pharmacy',amount:0.00,note:''},
+  {id:'petcare',label:'Pet care',amount:23.86,note:''},
+  {id:'school',label:'School',amount:16.44,note:'School24 & P&C'},
+];
+const variable = [
+  {id:'groceries',label:'Groceries',limit:400.00,spent:0},
+  {id:'restaurants',label:'Eating out',limit:224.00,spent:0},
+  {id:'entertainment',label:'Entertainment',limit:44.00,spent:0},
+];
+
+// keyword matcher — maps description keywords to variable category ids
+const MATCHERS = [
+  {id:'groceries', keywords:['aldi','coles','woolworths','woolies','iga','foodworks','nightowl','7-eleven','seasons supermarket','mount coolum','egg van','bakers delight','pink panther']},
+  {id:'restaurants', keywords:['mcdonald','uber*eats','uber eats','riceboi','black fox','beach bar','zarraffa','padre coffee','benny','sushi','red crane','ali baba','muffin break','boost juice','baycrest','crazy matt','hampden hotel','bistro','rsl','surf club','fortune sunshine','blended health','yochi','yo-chi','crawley','espresso','bear bones','simrock','valentino','wendys','little acorn','imperial hotel','dining bar','driftgoods coffee','kingdom coffee','mountain juice','bean crazy','mooloo brew','mooloolaba shaved']},
+  {id:'entertainment', keywords:['ticketek','laserzone','rollerdrome','iwannatick']},
+];
+
+// fixed matchers — to exclude from "other"
+const FIXED_KEYWORDS = [
+  'alpha residential','origin energy','sg fleet','ampol','telstra','netflix','paypal *stan','spotify',
+  'suncorp','fitness cartel','flying fish','lounge aesthetics','chemist warehouse','livelife pha',
+  'shackleton pharmacy','sippydowns','fraz family','dco pacific','petstock','mt creek vet',
+  'school24','mllba prmy','transportmainrds','bp connect','aussie world','7-eleven 409',
+  'super cheap','car wash','out vogue','kmart','afterpay','apple','temu','best and less',
+  'jean jail','cbeach','trybe','jay jays','lorna jane','mooloolaba nails','fresh nails',
+  'kathysbeautyspot','fur beauty','fullbloom','brazilian hut','golden lane','sephora','mecca',
+  'dan murphy','bws','moomoo securities','to flying fish','intl-fee'
+];
+
+let otherItems = [];
+let otherWeeklyTotal = 0;
+
+const $ = id => document.getElementById(id);
+
+function showView(name) {
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  $('view-'+name).classList.add('active');
+  document.querySelectorAll('.nav-btn').forEach(b=>{if(b.textContent.toLowerCase().trim()===name||(name==='import'&&b.textContent.toLowerCase().includes('import')))b.classList.add('active');});
+  if(name==='history') renderHistory();
+  if(name==='chart') renderChart();
+}
+
+function buildIncome() {
+  $('income-card').innerHTML = income.map(i=>`
+    <div class="card-row">
+      <div class="row-label"><div class="name">${i.label}</div></div>
+      <div class="row-input">
+        <span class="sym">$</span>
+        <input class="income-val" type="number" step="0.01" value="${i.amount}" data-id="${i.id}" data-type="income">
+        <span class="sym">/wk</span>
+      </div>
+    </div>`).join('');
+}
+
+function buildFixed() {
+  $('fixed-card').innerHTML = fixed.map(f=>`
+    <div class="card-row">
+      <div class="row-label">
+        <div class="name">${f.label}</div>
+        ${f.note?`<div class="note">${f.note}</div>`:''}
+      </div>
+      <div class="row-input">
+        <span class="sym">$</span>
+        <input type="number" step="0.01" value="${f.amount}" data-id="${f.id}" data-type="fixed">
+        <span class="sym">/wk</span>
+      </div>
+    </div>`).join('');
+}
+
+function buildVariable() {
+  $('variable-card').innerHTML = variable.map(v=>{
+    const over = v.spent > v.limit;
+    const pct  = v.limit>0 ? Math.min((v.spent/v.limit)*100,100) : 0;
+    const barCol = over ? '#ff4d4d' : pct>80 ? '#ff9500' : '#00d084';
+    const note = over ? `${fmt(v.spent-v.limit)} over limit` : `${fmt(v.limit-v.spent)} remaining`;
+    return `
+      <div class="var-row">
+        <div class="var-name">${v.label}</div>
+        <div class="var-inputs">
+          <div class="var-field">
+            <label>Weekly limit</label>
+            <input type="number" step="0.01" value="${v.limit}" data-id="${v.id}" data-field="limit" data-type="variable" inputmode="decimal">
+          </div>
+          <div class="var-field ${over?'over-box':''}">
+            <label>Spent this week</label>
+            <input type="number" step="0.01" value="${v.spent}" data-id="${v.id}" data-field="spent" data-type="variable" inputmode="decimal" class="${over?'over':''}">
+          </div>
+        </div>
+        <div class="bar-track"><div class="bar-fill" style="width:${pct}%;background:${barCol}"></div></div>
+        <div class="bar-note ${over?'over':''}">${note}</div>
+      </div>`;
+  }).join('');
+}
+
+function buildOther() {
+  const card = $('other-card');
+  $('other-total').textContent = fmt(otherWeeklyTotal)+' /wk';
+  if(!otherItems.length) {
+    card.innerHTML = `<div class="other-total-row"><span class="name" style="color:#555">Other spending</span><span style="font-size:15px;font-weight:700;color:#333">$0.00 /wk</span></div>`;
+    return;
+  }
+  const grouped = {};
+  otherItems.forEach(t=>{ grouped[t.cat] = (grouped[t.cat]||0)+t.amount; });
+  card.innerHTML = `
+    <div class="other-total-row">
+      <span class="name">Other spending</span>
+      <span style="font-size:15px;font-weight:700;color:#888" id="other-total">${fmt(otherWeeklyTotal)} /wk</span>
+    </div>
+    <div class="other-detail">
+      ${Object.entries(grouped).sort((a,b)=>b[1]-a[1]).map(([cat,amt])=>`
+        <div class="other-detail-item"><span>${cat}</span><span>${fmt(amt)}</span></div>
+      `).join('')}
+    </div>`;
+}
+
+function totals() {
+  const inc  = income.reduce((s,i)=>s+i.amount,0);
+  const fix  = fixed.reduce((s,f)=>s+f.amount,0);
+  const vari = variable.reduce((s,v)=>s+v.limit,0);
+  const other = otherWeeklyTotal;
+  const out  = fix+vari+other;
+  const sav  = inc-out;
+  return {inc,fix,vari,other,out,sav};
+}
+
+function recalc() {
+  const {inc,fix,vari,other,out,sav} = totals();
+  const rate = inc>0 ? (sav/inc*100) : 0;
+  const col  = sav<0 ? '#ff4d4d' : sav<150 ? '#ff9500' : '#00d084';
+  $('income-total').textContent   = fmt(inc)+' /wk';
+  $('fixed-total').textContent    = fmt(fix)+' /wk';
+  $('variable-total').textContent = fmt(vari)+' /wk';
+  $('foot-savings').textContent   = fmt(sav);
+  $('foot-savings').style.color   = col;
+  $('foot-rate').textContent      = rate.toFixed(1)+'% of income';
+  $('foot-annual').textContent    = fmt(sav*52);
+  $('foot-annual').style.color    = col;
+  $('foot-out').textContent       = fmt(out)+' out /wk';
+}
+
+document.addEventListener('input', e=>{
+  const {type,id,field} = e.target.dataset;
+  const val = parseFloat(e.target.value)||0;
+  if(type==='income'){const i=income.find(x=>x.id===id);if(i)i.amount=val;}
+  else if(type==='fixed'){const f=fixed.find(x=>x.id===id);if(f)f.amount=val;}
+  else if(type==='variable'){const v=variable.find(x=>x.id===id);if(v){v[field]=val;buildVariable();}}
+  recalc();
+});
+
+// CSV parsing
+function parseCSV(text) {
+  const lines = text.trim().split('\n');
+  if(lines.length<2) return [];
+  const headers = lines[0].split(',').map(h=>h.trim().toLowerCase().replace(/"/g,''));
+  const dateIdx   = headers.findIndex(h=>h==='date');
+  const descIdx   = headers.findIndex(h=>h==='description');
+  const amtIdx    = headers.findIndex(h=>h==='amount');
+  const dirIdx    = headers.findIndex(h=>h==='direction');
+  const catIdx    = headers.findIndex(h=>h==='category');
+  if(dateIdx<0||descIdx<0||amtIdx<0) return null;
+
+  const rows = [];
+  for(let i=1;i<lines.length;i++){
+    const cols = lines[i].match(/(".*?"|[^,]+)(?=,|$)/g)||lines[i].split(',');
+    const clean = c => (c||'').replace(/^"|"$/g,'').trim();
+    const dateStr = clean(cols[dateIdx]);
+    const desc    = clean(cols[descIdx]);
+    const amt     = parseFloat(clean(cols[amtIdx]))||0;
+    const dir     = dirIdx>=0 ? clean(cols[dirIdx]).toLowerCase() : 'debit';
+    const cat     = catIdx>=0 ? clean(cols[catIdx]) : '';
+    if(!dateStr||!desc||!amt) continue;
+    rows.push({date:new Date(dateStr),desc,amt,dir,cat});
+  }
+  return rows;
+}
+
+function getWeekRange(rows) {
+  // use last 7 days from most recent transaction date
+  const dates = rows.map(r=>r.date).filter(d=>!isNaN(d));
+  if(!dates.length) return {start:new Date(0),end:new Date()};
+  const maxDate = new Date(Math.max(...dates));
+  const start = new Date(maxDate); start.setDate(start.getDate()-6); start.setHours(0,0,0,0);
+  return {start, end:maxDate};
+}
+
+function processCSV(rows) {
+  const {start, end} = getWeekRange(rows);
+  const weekRows = rows.filter(r=>r.dir==='debit' && r.date>=start && r.date<=end);
+
+  // reset variable spent
+  variable.forEach(v=>v.spent=0);
+  const unmatched = {};
+
+  weekRows.forEach(row=>{
+    const descLower = row.desc.toLowerCase();
+
+    // try variable matchers first
+    let matched = false;
+    for(const m of MATCHERS){
+      if(m.keywords.some(kw=>descLower.includes(kw))){
+        const v = variable.find(x=>x.id===m.id);
+        if(v){ v.spent += row.amt; matched=true; break; }
+      }
+    }
+    if(matched) return;
+
+    // check if it matches a fixed category keyword (skip — already budgeted)
+    const isFixed = FIXED_KEYWORDS.some(kw=>descLower.includes(kw.toLowerCase()));
+    if(isFixed) return;
+
+    // otherwise it's other
+    const cat = row.cat || 'Other';
+    unmatched[cat] = (unmatched[cat]||[]);
+    unmatched[cat].push(row);
+  });
+
+  otherItems = Object.entries(unmatched).map(([cat,txns])=>({
+    cat, amount: txns.reduce((s,t)=>s+t.amt,0)
+  }));
+  otherWeeklyTotal = otherItems.reduce((s,i)=>s+i.amount,0);
+
+  buildVariable();
+  buildOther();
+  recalc();
+
+  const weekStart = start.toLocaleDateString('en-AU',{day:'numeric',month:'short'});
+  const weekEnd   = end.toLocaleDateString('en-AU',{day:'numeric',month:'short'});
+  $('week-label').value = `Week — ${weekStart} to ${weekEnd}`;
+
+  return weekRows.length;
+}
+
+// file input handler
+$('csv-file-input').addEventListener('change', function(e){
+  const file = e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = function(ev){
+    const rows = parseCSV(ev.target.result);
+    if(rows===null){
+      $('csv-status').className='csv-status err';
+      $('csv-status').textContent='Could not read CSV — check date, description, amount columns exist';
+      return;
+    }
+    const count = processCSV(rows);
+    $('csv-status').className='csv-status ok';
+    $('csv-status').textContent=`✓ Processed ${count} transactions — variable spending updated`;
+    showView('budget');
+  };
+  reader.readAsText(file);
+});
+
+// drag and drop
+const drop = $('csv-drop');
+drop.addEventListener('dragover',e=>{e.preventDefault();drop.classList.add('drag');});
+drop.addEventListener('dragleave',()=>drop.classList.remove('drag'));
+drop.addEventListener('drop',e=>{
+  e.preventDefault();drop.classList.remove('drag');
+  const file=e.dataTransfer.files[0];
+  if(!file||!file.name.endsWith('.csv')) return;
+  const reader=new FileReader();
+  reader.onload=ev=>{
+    const rows=parseCSV(ev.target.result);
+    if(rows===null){$('csv-status').className='csv-status err';$('csv-status').textContent='Could not read CSV';return;}
+    const count=processCSV(rows);
+    $('csv-status').className='csv-status ok';
+    $('csv-status').textContent=`✓ Processed ${count} transactions`;
+    showView('budget');
+  };
+  reader.readAsText(file);
+});
+
+// history
+function loadHistory(){try{return JSON.parse(localStorage.getItem('budget_history')||'[]');}catch(e){return[];}}
+function saveHistory(h){localStorage.setItem('budget_history',JSON.stringify(h));}
+
+function saveWeek(){
+  const label=$('week-label').value.trim()||('Week — '+new Date().toLocaleDateString('en-AU',{day:'numeric',month:'short',year:'numeric'}));
+  const {inc,fix,vari,other,out,sav}=totals();
+  const h=loadHistory();
+  h.unshift({label,date:new Date().toISOString(),inc,fix,vari,other,out,sav});
+  saveHistory(h);
+  $('week-label').value='';
+  alert('Week archived!');
+}
+
+function renderHistory(){
+  const h=loadHistory();
+  const el=$('history-output');
+  if(!h.length){
+    el.innerHTML='<div class="no-history">No weeks archived yet.<br>Set your figures and tap Archive.</div>';
+    return;
+  }
+  el.innerHTML=`<div class="history-wrap">
+    <table class="history-table">
+      <thead><tr><th>Week</th><th>Income</th><th>Fixed</th><th>Variable</th><th>Other</th><th>Savings</th><th></th></tr></thead>
+      <tbody>${h.map((w,i)=>{
+        const col=w.sav<0?'#ff4d4d':w.sav<150?'#ff9500':'#00d084';
+        return`<tr>
+          <td>${w.label}</td>
+          <td style="color:#00d084">${fmt(w.inc)}</td>
+          <td>${fmt(w.fix)}</td>
+          <td>${fmt(w.vari)}</td>
+          <td>${fmt(w.other||0)}</td>
+          <td style="color:${col};font-weight:700">${fmt(w.sav)}</td>
+          <td><button class="del-btn" onclick="deleteWeek(${i})">×</button></td>
+        </tr>`;
+      }).join('')}</tbody>
+    </table>
+  </div>`;
+}
+
+function deleteWeek(i){
+  const h=loadHistory();h.splice(i,1);saveHistory(h);renderHistory();renderChart();
+}
+
+let chartInst=null;
+function renderChart(){
+  const h=loadHistory().slice().reverse();
+  const canvas=$('myChart');
+  const ctx=canvas.getContext('2d');
+  if(chartInst){chartInst.destroy();chartInst=null;}
+  if(!h.length){
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    ctx.fillStyle='#333';ctx.font='14px -apple-system,sans-serif';ctx.textAlign='center';
+    ctx.fillText('Archive weeks to see your chart',(canvas.offsetWidth||460)/2,120);
+    return;
+  }
+  const dpr=window.devicePixelRatio||1;
+  const W=canvas.offsetWidth||460;const H=260;
+  canvas.width=W*dpr;canvas.height=H*dpr;ctx.scale(dpr,dpr);
+  const P={t:20,r:20,b:48,l:64};
+  const cW=W-P.l-P.r;const cH=H-P.t-P.b;
+  const incD=h.map(w=>+w.inc.toFixed(2));
+  const outD=h.map(w=>+w.out.toFixed(2));
+  const savD=h.map(w=>+w.sav.toFixed(2));
+  const all=[...incD,...outD,...savD];
+  const mn=Math.min(...all,0);const mx=Math.max(...all);const rng=mx-mn||1;
+  const xp=i=>P.l+(h.length===1?cW/2:i*cW/(h.length-1));
+  const yp=v=>P.t+cH-((v-mn)/rng)*cH;
+  ctx.strokeStyle='#1a1a1a';ctx.lineWidth=1;
+  for(let t=0;t<=4;t++){
+    const y=P.t+(t/4)*cH;
+    ctx.beginPath();ctx.moveTo(P.l,y);ctx.lineTo(P.l+cW,y);ctx.stroke();
+    ctx.fillStyle='#444';ctx.font='10px -apple-system,sans-serif';ctx.textAlign='right';
+    ctx.fillText(fmt(mx-(t/4)*rng),P.l-6,y+4);
+  }
+  if(mn<0){const zy=yp(0);ctx.strokeStyle='#2a2a2a';ctx.setLineDash([4,4]);ctx.beginPath();ctx.moveTo(P.l,zy);ctx.lineTo(P.l+cW,zy);ctx.stroke();ctx.setLineDash([]);}
+  function line(data,color,dash=[]){
+    ctx.strokeStyle=color;ctx.lineWidth=2.5;ctx.setLineDash(dash);
+    ctx.beginPath();data.forEach((v,i)=>{const x=xp(i),y=yp(v);i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);});ctx.stroke();ctx.setLineDash([]);
+    data.forEach((v,i)=>{ctx.beginPath();ctx.arc(xp(i),yp(v),4,0,Math.PI*2);ctx.fillStyle=color;ctx.fill();});
+  }
+  line(incD,'#00d084');line(outD,'#ff4d4d');line(savD,'#4a9eca',[6,3]);
+  ctx.fillStyle='#444';ctx.font='10px -apple-system,sans-serif';ctx.textAlign='center';
+  h.forEach((w,i)=>{const s=w.label.length>10?w.label.slice(0,10)+'…':w.label;ctx.fillText(s,xp(i),H-P.b+16);});
+}
+
+$('week-label').value='Week — '+new Date().toLocaleDateString('en-AU',{day:'numeric',month:'short',year:'numeric'});
+buildIncome();buildFixed();buildVariable();buildOther();recalc();
+</script>
+</body>
+</html>
