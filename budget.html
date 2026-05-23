@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Weekly Budget</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #0a0a0a; min-height: 100vh; font-family: -apple-system, 'SF Pro Display', 'Helvetica Neue', sans-serif; color: #fff; padding-bottom: 130px; }
+  input { background: transparent; border: none; border-bottom: 1px solid #2a2a2a; color: #fff; font-family: inherit; font-size: 15px; font-weight: 500; padding: 2px 0; text-align: right; outline: none; transition: border-color 0.2s; }
+  input:focus { border-bottom-color: #fff; }
+  .green { color: #00d084; }
+  .red { color: #ff4d4d; }
+  .orange { color: #ff9500; }
+  .dim { color: #444; }
+
+  header { padding: 28px 24px 24px; border-bottom: 1px solid #1a1a1a; }
+  .eyebrow { font-size: 11px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: #444; margin-bottom: 6px; }
+  .page-title { font-size: 30px; font-weight: 700; letter-spacing: -1px; }
+
+  .content { max-width: 480px; margin: 0 auto; padding: 0 0 20px; }
+  .section { padding: 28px 24px 0; }
+  .section-label { font-size: 11px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: #444; margin-bottom: 14px; }
+  .card { background: #111; border-radius: 16px; overflow: hidden; }
+  .card-row { display: flex; align-items: center; padding: 14px 20px; border-bottom: 1px solid #1a1a1a; gap: 12px; }
+  .card-row:last-child { border-bottom: none; }
+  .row-label { flex: 1; }
+  .row-label .name { font-size: 15px; font-weight: 500; color: #fff; }
+  .row-label .note { font-size: 12px; color: #444; margin-top: 2px; }
+  .row-input { display: flex; align-items: center; gap: 4px; }
+  .row-input .sym { font-size: 12px; color: #444; }
+  .section-total { display: flex; justify-content: space-between; align-items: center; padding: 12px 4px 0; }
+  .section-total .label { font-size: 12px; color: #444; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; }
+  .section-total .value { font-size: 16px; font-weight: 700; }
+
+  /* variable rows */
+  .var-row { padding: 16px 20px; border-bottom: 1px solid #1a1a1a; }
+  .var-row:last-child { border-bottom: none; }
+  .var-top { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; flex-wrap: wrap; }
+  .var-name { flex: 1; font-size: 15px; font-weight: 500; color: #fff; min-width: 80px; }
+  .var-fields { display: flex; align-items: center; gap: 10px; }
+  .var-field { display: flex; align-items: center; gap: 4px; }
+  .var-field label { font-size: 11px; color: #444; white-space: nowrap; }
+  .var-field input { width: 64px; font-size: 13px; }
+  .bar-track { background: #1a1a1a; border-radius: 3px; height: 4px; overflow: hidden; }
+  .bar-fill { height: 100%; border-radius: 3px; transition: width 0.3s, background 0.3s; }
+  .bar-note { font-size: 11px; color: #444; margin-top: 5px; }
+  .bar-note.over { color: #ff4d4d; }
+
+  /* footer */
+  footer { position: fixed; bottom: 0; left: 0; right: 0; background: #111; border-top: 1px solid #1a1a1a; }
+  .footer-inner { max-width: 480px; margin: 0 auto; padding: 16px 24px 28px; display: flex; justify-content: space-between; align-items: flex-start; }
+  .foot-block {}
+  .foot-label { font-size: 11px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: #444; margin-bottom: 4px; }
+  .foot-main { font-size: 32px; font-weight: 700; letter-spacing: -1px; line-height: 1; }
+  .foot-sub { font-size: 12px; color: #444; margin-top: 5px; }
+  .foot-block.right { text-align: right; }
+  .foot-block.right .foot-main { font-size: 20px; letter-spacing: -0.5px; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="eyebrow">Weekly</div>
+  <div class="page-title">Budget</div>
+</header>
+
+<div class="content">
+
+  <!-- INCOME -->
+  <div class="section">
+    <div class="section-label">Income</div>
+    <div class="card" id="income-card"></div>
+    <div class="section-total">
+      <span class="label">Total</span>
+      <span class="value green" id="income-total"></span>
+    </div>
+  </div>
+
+  <!-- FIXED -->
+  <div class="section">
+    <div class="section-label">Fixed Expenses</div>
+    <div class="card" id="fixed-card"></div>
+    <div class="section-total">
+      <span class="label">Total</span>
+      <span class="value red" id="fixed-total"></span>
+    </div>
+  </div>
+
+  <!-- VARIABLE -->
+  <div class="section">
+    <div class="section-label">Variable Spending</div>
+    <div class="card" id="variable-card"></div>
+    <div class="section-total">
+      <span class="label">Total</span>
+      <span class="value orange" id="variable-total"></span>
+    </div>
+  </div>
+
+</div>
+
+<footer>
+  <div class="footer-inner">
+    <div class="foot-block">
+      <div class="foot-label">Weekly Savings</div>
+      <div class="foot-main" id="foot-savings"></div>
+      <div class="foot-sub" id="foot-rate"></div>
+    </div>
+    <div class="foot-block right">
+      <div class="foot-label">Annual</div>
+      <div class="foot-main" id="foot-annual"></div>
+      <div class="foot-sub" id="foot-out"></div>
+    </div>
+  </div>
+</footer>
+
+<script>
+const fmt = (n) => n.toLocaleString('en-AU', { style: 'currency', currency: 'AUD', minimumFractionDigits: 2 });
+
+const income = [
+  { id: 'i1', label: 'Tall Tech Noosa Wages', amount: 1887.93 },
+  { id: 'i2', label: 'Ochre Health',           amount: 600.00 },
+];
+
+const fixed = [
+  { id: 'rent',     label: 'Rent',          amount: 670.00,  note: 'Alpha Residential' },
+  { id: 'nzmtg',   label: 'NZ Mortgage',    amount: 94.84,   note: 'Top-up transfer' },
+  { id: 'power',   label: 'Power',          amount: 35.00,   note: 'Origin Energy' },
+  { id: 'water',   label: 'Water',          amount: 15.50,   note: 'Via rent account' },
+  { id: 'telstra', label: 'Telstra',         amount: 79.57,   note: '' },
+  { id: 'netflix', label: 'Netflix',         amount: 4.58,    note: '' },
+  { id: 'stan',    label: 'Stan',            amount: 7.38,    note: '' },
+  { id: 'spotify', label: 'Spotify',         amount: 5.77,    note: '' },
+  { id: 'insure',  label: 'Insurance',       amount: 27.16,   note: 'Suncorp' },
+  { id: 'gym',     label: 'Gym',             amount: 51.44,   note: 'Fitness Cartel' },
+  { id: 'ff',      label: 'Flying Fish',     amount: 35.46,   note: 'Swimming' },
+
+  { id: 'beauty',   label: 'Beauty',           amount: 12.95,   note: 'The Lounge Aesthetics' },
+  { id: 'pharmacy', label: 'Pharmacy',          amount: 0.00,    note: '' },
+  { id: 'petcare',  label: 'Pet Care',          amount: 23.86,   note: '' },
+  { id: 'school',   label: 'School',            amount: 16.44,   note: 'School24 & P&C' },
+];
+
+const variable = [
+  { id: 'groceries',     label: 'Groceries',    limit: 400.00, spent: 400.53 },
+  { id: 'restaurants',   label: 'Eating Out',   limit: 139.00, spent: 139.00 },
+  { id: 'entertainment', label: 'Entertainment',limit: 44.00,  spent: 44.42 },
+];
+
+function get(id) { return document.getElementById(id); }
+
+function buildIncome() {
+  const card = get('income-card');
+  card.innerHTML = income.map((item, idx) => `
+    <div class="card-row">
+      <div class="row-label"><div class="name">${item.label}</div></div>
+      <div class="row-input">
+        <span class="sym">$</span>
+        <input type="number" step="0.01" value="${item.amount}" data-id="${item.id}" data-type="income" style="color:#00d084;font-weight:600;width:88px;">
+        <span class="sym">/wk</span>
+      </div>
+    </div>
+  `).join('');
+}
+
+function buildFixed() {
+  const card = get('fixed-card');
+  card.innerHTML = fixed.map((item) => `
+    <div class="card-row">
+      <div class="row-label">
+        <div class="name">${item.label}</div>
+        ${item.note ? `<div class="note">${item.note}</div>` : ''}
+      </div>
+      <div class="row-input">
+        <span class="sym">$</span>
+        <input type="number" step="0.01" value="${item.amount}" data-id="${item.id}" data-type="fixed" style="width:80px;">
+        <span class="sym">/wk</span>
+      </div>
+    </div>
+  `).join('');
+}
+
+function buildVariable() {
+  const card = get('variable-card');
+  card.innerHTML = variable.map((item) => {
+    const over = item.spent > item.limit;
+    const pct = item.limit > 0 ? Math.min((item.spent / item.limit) * 100, 100) : 0;
+    const barCol = over ? '#ff4d4d' : pct > 80 ? '#ff9500' : '#00d084';
+    const remaining = over ? `${fmt(item.spent - item.limit)} over limit` : `${fmt(item.limit - item.spent)} remaining`;
+    return `
+      <div class="var-row">
+        <div class="var-top">
+          <div class="var-name">${item.label}</div>
+          <div class="var-fields">
+            <div class="var-field">
+              <label>limit $</label>
+              <input type="number" step="0.01" value="${item.limit}" data-id="${item.id}" data-field="limit" data-type="variable" style="color:#888;">
+            </div>
+            <div class="var-field">
+              <label>spent $</label>
+              <input type="number" step="0.01" value="${item.spent}" data-id="${item.id}" data-field="spent" data-type="variable" style="color:${over ? '#ff4d4d' : '#fff'};">
+            </div>
+          </div>
+        </div>
+        <div class="bar-track"><div class="bar-fill" style="width:${pct}%;background:${barCol};"></div></div>
+        <div class="bar-note ${over ? 'over' : ''}">${remaining}</div>
+      </div>
+    `;
+  }).join('');
+}
+
+function recalc() {
+  const totalIncome = income.reduce((s, i) => s + i.amount, 0);
+  const totalFixed  = fixed.reduce((s, f) => s + f.amount, 0);
+  const totalVar    = variable.reduce((s, v) => s + v.limit, 0);
+  const totalOut    = totalFixed + totalVar;
+  const savings     = totalIncome - totalOut;
+  const rate        = totalIncome > 0 ? (savings / totalIncome * 100) : 0;
+  const savCol      = savings < 0 ? '#ff4d4d' : savings < 150 ? '#ff9500' : '#00d084';
+
+  get('income-total').textContent   = fmt(totalIncome) + ' /wk';
+  get('fixed-total').textContent    = fmt(totalFixed)  + ' /wk';
+  get('variable-total').textContent = fmt(totalVar)    + ' /wk';
+
+  get('foot-savings').textContent = fmt(savings);
+  get('foot-savings').style.color = savCol;
+  get('foot-rate').textContent    = rate.toFixed(1) + '% of income';
+
+  get('foot-annual').textContent  = fmt(savings * 52);
+  get('foot-annual').style.color  = savCol;
+  get('foot-out').textContent     = fmt(totalOut) + ' out /wk';
+}
+
+document.addEventListener('input', (e) => {
+  const el = e.target;
+  const type = el.dataset.type;
+  const id   = el.dataset.id;
+  const val  = parseFloat(el.value) || 0;
+
+  if (type === 'income') {
+    const item = income.find(i => i.id === id);
+    if (item) item.amount = val;
+  } else if (type === 'fixed') {
+    const item = fixed.find(f => f.id === id);
+    if (item) item.amount = val;
+  } else if (type === 'variable') {
+    const field = el.dataset.field;
+    const item = variable.find(v => v.id === id);
+    if (item) {
+      item[field] = val;
+      buildVariable(); // rebuild bar + colour
+    }
+  }
+  recalc();
+});
+
+// init
+buildIncome();
+buildFixed();
+buildVariable();
+recalc();
+</script>
+</body>
+</html>
